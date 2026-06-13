@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DailyCam MVP Prototype</title>
+    <style>
+        /* [공통 스타일] 초기화 및 기본 설정 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #F8F9FA;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            background-color: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        /* 화면 전환용 클래스 (기본 숨김) */
+        .app-view {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .app-view.active {
+            display: flex;
+        }
+
+        /* ==========================================
+           1. 촬영 화면 (Camera View) 스타일
+           ========================================== */
+        #view-camera { background-color: #000000; }
+        .camera-top-bar { height: 54px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; color: #FFFFFF; }
+        .icon-btn { background: none; border: none; color: #FFFFFF; font-size: 20px; cursor: pointer; opacity: 0.8; }
+        .ratio-indicator { font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.15); padding: 4px 10px; border-radius: 12px; }
+        .viewfinder { flex: 1; width: 100%; background-color: #1C1C1E; position: relative; overflow: hidden; border-radius: 12px; }
+        .viewfinder::before { content: ''; position: absolute; top: 33.33%; bottom: 33.33%; left: 0; right: 0; border-top: 1px solid rgba(255,255,255,0.15); border-bottom: 1px solid rgba(255,255,255,0.15); }
+        .viewfinder::after { content: ''; position: absolute; left: 33.33%; right: 33.33%; top: 0; bottom: 0; border-left: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15); }
+        .camera-controls { height: 110px; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background-color: #000000; }
+        .gallery-thumb { width: 44px; height: 44px; border-radius: 50%; background-color: #2C2C2E; border: 2px solid #FFFFFF; cursor: pointer; }
+        .shutter-btn-container { width: 72px; height: 72px; border-radius: 50%; border: 4px solid #FFFFFF; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .shutter-btn-inner { width: 54px; height: 54px; border-radius: 50%; background-color: #FF3B30; transition: all 0.2s ease; }
+        .shutter-btn-container.recording .shutter-btn-inner { width: 28px; height: 28px; border-radius: 6px; }
+        .flip-btn { width: 44px; height: 44px; border-radius: 50%; background-color: #2C2C2E; border: none; color: #FFFFFF; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+
+        /* ==========================================
+           2. 미디어 선택 화면 (Picker View) 스타일
+           ========================================== */
+        .picker-header { height: 56px; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 1px solid #F2F2F7; background-color: #FFFFFF; }
+        .dropdown-title { font-size: 16px; font-weight: 700; color: #1C1C1E; display: flex; align-items: center; gap: 4px; }
+        .next-btn { background-color: #E5E5EA; color: #8E8E93; border: none; padding: 8px 16px; border-radius: 18px; font-size: 14px; font-weight: 600; cursor: not-allowed; transition: all 0.2s ease; }
+        .next-btn.active { background-color: #007AFF; color: #FFFFFF; cursor: pointer; }
+        .media-grid-container { flex: 1; overflow-y: auto; background-color: #F8F9FA; padding: 2px; }
+        .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+        .media-item { position: relative; aspect-ratio: 1 / 1; background: linear-gradient(135deg, #E5E5EA 0%, #D1D1D6 100%); cursor: pointer; }
+        .media-item:nth-child(2n) { background: linear-gradient(135deg, #D1D1D6 0%, #C7C7CC 100%); }
+        .media-item:nth-child(3n) { background: linear-gradient(135deg, #E5E5EA 0%, #BBF2F6 100%); }
+        .duration-badge { position: absolute; bottom: 6px; right: 6px; background-color: rgba(0, 0, 0, 0.6); color: #FFFFFF; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+        .select-circle { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #FFFFFF; background-color: rgba(0, 0, 0, 0.2); display: flex; justify-content: center; align-items: center; color: #FFFFFF; font-size: 12px; font-weight: 700; }
+        .media-item.selected .select-circle { background-color: #007AFF; border-color: #007AFF; }
+        .media-item.selected::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.1); border: 2px solid #007AFF; pointer-events: none; }
+        .selected-tray-container { height: 84px; background-color: #FFFFFF; border-top: 1px solid #F2F2F7; display: flex; align-items: center; padding: 0 16px; overflow-x: auto; gap: 12px; }
+        .tray-placeholder { color: #C7C7CC; font-size: 14px; width: 100%; text-align: center; }
+        .tray-item { position: relative; width: 52px; height: 52px; border-radius: 6px; flex-shrink: 0; }
+        .tray-delete-btn { position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; background-color: #8E8E93; color: #FFFFFF; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 10px; cursor: pointer; border: 1px solid #FFFFFF; }
+
+        /* ==========================================
+           3. 타임라인 편집 화면 (Timeline View) 스타일
+           ========================================== */
+        .player-container { width: 100%; aspect-ratio: 16 / 9; background-color: #1C1C1E; position: relative; display: flex; justify-content: center; align-items: center; }
+        .dummy-video-frame { width: 100%; height: 100%; background: linear-gradient(210deg, #64748b, #1e293b); display: flex; justify-content: center; align-items: center; }
+        .target-face { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(to bottom, #ffeded, #ffd0d0); border: 2px dashed rgba(255,255,255,0.6); display: flex; justify-content: center; align-items: center; font-size: 20px; transition: filter 0.3s ease; }
+        .target-face.mosaic-active { filter: blur(12px); border: none; }
+        .player-timecode { position: absolute; bottom: 8px; left: 12px; color: #FFFFFF; font-size: 12px; background-color: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; }
+        .edit-toolbar { height: 52px; background-color: #FFFFFF; border-bottom: 1px solid #E5E5EA; display: flex; justify-content: space-around; align-items: center; padding: 0 8px; }
+        .tool-btn { background: none; border: none; color: #1C1C1E; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 16px; border-radius: 8px; }
+        .tool-btn:active { background-color: #F2F2F7; }
+        .tool-btn.mosaic-toggle-btn.active { color: #007AFF; background-color: #E8F2FF; }
+        .timeline-container { flex: 1; background-color: #F8F9FA; position: relative; display: flex; flex-direction: column; }
+        .timeline-header { height: 40px; display: flex; justify-content: center; align-items: center; }
+        .play-pause-btn { background: none; border: none; font-size: 18px; cursor: pointer; }
+        .timeline-track-wrapper { flex: 1; overflow-x: auto; position: relative; padding: 20px 0; display: flex; align-items: center; }
+        .playhead-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background-color: #FF3B30; z-index: 10; pointer-events: none; }
+        .clips-stream { display: flex; gap: 4px; padding-left: 50%; padding-right: 50%; height: 72px; }
+        .timeline-clip { height: 100%; width: 140px; background: linear-gradient(135deg, #E5E5EA 0%, #D1D1D6 100%); border: 2px solid #C7C7CC; border-radius: 6px; position: relative; cursor: pointer; flex-shrink: 0; overflow: hidden; }
+        .timeline-clip.selected { border: 2px solid #FFCC00; box-shadow: 0 0 8px rgba(255, 204, 0, 0.4); }
+        .clip-thumb-preview { width: 100%; height: 100%; display: flex; align-items: flex-end; padding: 4px; font-size: 10px; color: #8E8E93; font-weight: 500; }
+
+        /* 플레이스홀더 화면용 (음성/자막, 전체 탭 클릭시) */
+        .placeholder-view { flex: 1; display: flex; justify-content: center; align-items: center; color: #8E8E93; font-size: 16px; background-color: #F8F9FA; }
+
+        /* ==========================================
+           4. 하단 메뉴바 (Bottom Nav) 공통 스타일
+           ========================================== */
+        .bottom-nav { display: flex; height: 64px; background-color: #FFFFFF; border-top: 1px solid #E5E5EA; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; display: flex; align-items: center; justify-content: center; background: none; border: none; color: #8E8E93; font-size: 15px; font-weight: 500; cursor: pointer; }
+        .nav-item.active { color: #000000; font-weight: 700; position: relative; }
+        .nav-item.active::after { content: ''; position: absolute; bottom: 6px; width: 4px; height: 4px; background-color: #000000; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <main class="app-view active" id="view-camera">
+            <div class="camera-top-bar">
+                <button class="icon-btn">⚡</button>
+                <div class="ratio-indicator">9:16</div>
+                <button class="icon-btn">⚙️</button>
+            </div>
+            <div class="viewfinder"></div>
+            <div class="camera-controls">
+                <div class="gallery-thumb" id="galleryBtn"></div>
+                <div class="shutter-btn-container" id="shutterBtn">
+                    <div class="shutter-btn-inner"></div>
+                </div>
+                <button class="flip-btn">🔄</button>
+            </div>
+        </main>
+
+        <main class="app-view" id="view-picker">
+            <header class="picker-header">
+                <div class="dropdown-title">최근 항목 ▾</div>
+                <button class="next-btn" id="nextBtn">다음</button>
+            </header>
+            <div class="media-grid-container">
+                <div class="media-grid" id="mediaGrid"></div>
+            </div>
+            <div class="selected-tray-container" id="selectedTray">
+                <div class="tray-placeholder">편집할 영상을 선택하세요</div>
+            </div>
+        </main>
+
+        <main class="app-view" id="view-timeline">
+            <div class="player-container">
+                <div class="dummy-video-frame">
+                    <div class="target-face" id="targetFace">👦🏻</div>
+                </div>
+                <div class="player-timecode">00:02 / 00:08</div>
+            </div>
+            <div class="edit-toolbar">
+                <button class="tool-btn" id="splitBtn">✂️ <span>분할</span></button>
+                <button class="tool-btn" id="deleteBtn">🗑️ <span>삭제</span></button>
+                <button class="tool-btn mosaic-toggle-btn" id="mosaicBtn">🏁 <span>모자이크</span></button>
+            </div>
+            <div class="timeline-container">
+                <div class="timeline-header">
+                    <button class="play-pause-btn" id="playBtn">▶</button>
+                </div>
+                <div class="timeline-track-wrapper">
+                    <div class="playhead-line"></div>
+                    <div class="clips-stream" id="clipsStream">
+                        <div class="timeline-clip selected"><div class="clip-thumb-preview">클립 1 (4s)</div></div>
+                        <div class="timeline-clip"><div class="clip-thumb-preview">클립 2 (4s)</div></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <main class="app-view" id="view-placeholder">
+            <div class="placeholder-view" id="placeholderText">준비 중인 화면입니다.</div>
+        </main>
+
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-target="camera">촬영</button>
+            <button class="nav-item" data-target="picker">편집</button>
+            <button class="nav-item" data-target="audio">음성/자막</button>
+            <button class="nav-item" data-target="all">전체</button>
+        </nav>
+    </div>
+
+    <script>
+        // --- 탭 메뉴 및 화면 전환 로직 ---
+        const navItems = document.querySelectorAll('.nav-item');
+        const views = {
+            camera: document.getElementById('view-camera'),
+            picker: document.getElementById('view-picker'),
+            timeline: document.getElementById('view-timeline'),
+            placeholder: document.getElementById('view-placeholder')
+        };
+        const placeholderText = document.getElementById('placeholderText');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+
+                // 모든 화면 숨김
+                Object.values(views).forEach(v => v.classList.remove('active'));
+
+                const target = item.dataset.target;
+                if (target === 'camera') views.camera.classList.add('active');
+                else if (target === 'picker') views.picker.classList.add('active'); // 편집 탭 누르면 고르는 화면 우선
+                else if (target === 'audio') {
+                    placeholderText.innerText = "음성/자막 편집 기능 준비 중";
+                    views.placeholder.classList.add('active');
+                } else if (target === 'all') {
+                    placeholderText.innerText = "전체 설정 기능 준비 중";
+                    views.placeholder.classList.add('active');
+                }
+            });
+        });
+
+        // 1. 촬영 인터랙션
+        const shutterBtn = document.getElementById('shutterBtn');
+        shutterBtn.addEventListener('click', () => shutterBtn.classList.toggle('recording'));
+        document.getElementById('galleryBtn').addEventListener('click', () => document.querySelector('[data-target="picker"]').click());
+
+        // 2. 미디어 선택 및 하단 트레이 인터랙션
+        const dummyVideos = ['0:05', '0:14', '1:23', '0:45', '0:09', '2:10'];
+        let selectedItems = [];
+        const mediaGrid = document.getElementById('mediaGrid');
+        const selectedTray = document.getElementById('selectedTray');
+        const nextBtn = document.getElementById('nextBtn');
+
+        dummyVideos.forEach((duration, index) => {
+            const item = document.createElement('div');
+            item.className = 'media-item';
+            item.innerHTML = `<div class="select-circle"></div><div class="duration-badge">${duration}</div>`;
+            item.addEventListener('click', () => {
+                const idx = selectedItems.indexOf(index);
+                if (idx > -1) selectedItems.splice(idx, 1);
+                else selectedItems.push(index);
+                updatePickerUI();
+            });
+            mediaGrid.appendChild(item);
+        });
+
+        function updatePickerUI() {
+            const items = document.querySelectorAll('.media-item');
+            items.forEach((item, index) => {
+                const order = selectedItems.indexOf(index);
+                const circle = item.querySelector('.select-circle');
+                if (order > -1) { item.classList.add('selected'); circle.innerText = order + 1; }
+                else { item.classList.remove('selected'); circle.innerText = ''; }
+            });
+
+            if (selectedItems.length === 0) {
+                selectedTray.innerHTML = `<div class="tray-placeholder">편집할 영상을 선택하세요</div>`;
+                nextBtn.classList.remove('active');
+                nextBtn.innerText = '다음';
+            } else {
+                selectedTray.innerHTML = '';
+                selectedItems.forEach(videoIdx => {
+                    const trayItem = document.createElement('div');
+                    trayItem.className = 'tray-item';
+                    trayItem.style.background = window.getComputedStyle(items[videoIdx]).background;
+                    selectedTray.appendChild(trayItem);
+                });
+                nextBtn.classList.add('active');
+                nextBtn.innerText = `다음 (${selectedItems.length})`;
+            }
+        }
+
+        // 미디어 피커에서 '다음' 버튼 클릭 시 -> 타임라인 편집 화면으로 진입
+        nextBtn.addEventListener('click', () => {
+            if (!nextBtn.classList.contains('active')) return;
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            views.timeline.classList.add('active'); // 타임라인 활성화
+        });
+
+        // 3. 타임라인 및 모자이크 인터랙션
+        const mosaicBtn = document.getElementById('mosaicBtn');
+        const targetFace = document.getElementById('targetFace');
+        mosaicBtn.addEventListener('click', () => {
+            mosaicBtn.classList.toggle('active');
+            targetFace.classList.toggle('mosaic-active');
+            targetFace.innerText = targetFace.classList.contains('mosaic-active') ? '' : '👦🏻';
+        });
+
+        const clipsStream = document.getElementById('clipsStream');
+        let activeClip = document.querySelector('.timeline-clip.selected');
+        clipsStream.addEventListener('click', (e) => {
+            const clip = e.target.closest('.timeline-clip');
+            if (!clip) return;
+            document.querySelectorAll('.timeline-clip').forEach(c => c.classList.remove('selected'));
+            clip.classList.add('selected');
+            activeClip = clip;
+        });
+
+        document.getElementById('splitBtn').addEventListener('click', () => {
+            if (!activeClip) return;
+            activeClip.style.width = `${Math.max(50, activeClip.offsetWidth / 2)}px`;
+            activeClip.querySelector('.clip-thumb-preview').innerText = `잘린 클립`;
+            const newClip = document.createElement('div');
+            newClip.className = 'timeline-clip';
+            newClip.style.width = activeClip.style.width;
+            newClip.innerHTML = `<div class="clip-thumb-preview">분할 클립</div>`;
+            activeClip.after(newClip);
+        });
+
+        document.getElementById('deleteBtn').addEventListener('click', () => {
+            if (!activeClip) return;
+            const next = activeClip.nextElementSibling || activeClip.previousElementSibling;
+            activeClip.remove();
+            if (next && next.classList.contains('timeline-clip')) { next.classList.add('selected'); activeClip = next; }
+            else activeClip = null;
+        });
+
+        const playBtn = document.getElementById('playBtn');
+        playBtn.addEventListener('click', () => playBtn.innerText = playBtn.innerText === '▶' ? '⏸' : '▶');
+    </script>
+</body>
+</html>
