@@ -39,6 +39,7 @@
             flex-direction: column;
             flex: 1;
             overflow: hidden;
+            min-height: 0; /* [버그수정] 자식 요소(비디오)로 인해 레이아웃이 화면 밖으로 터지는 현상 방지 */
         }
 
         .app-view.active {
@@ -54,12 +55,12 @@
         .ratio-indicator { font-size: 13px; font-weight: 600; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 12px; letter-spacing: 0.5px; }
         
         /* 뷰파인더 및 실시간 무음 스트리밍 영역 */
-        .viewfinder { flex: 1; width: 100%; background-color: #1C1C1E; position: relative; overflow: hidden; border-radius: 16px; }
-        #cameraRealStream { width: 100%; height: 100%; object-fit: cover; }
-        #cameraRealStream.front-active { transform: scaleX(-1); } /* 전면 렌즈 거울 모드 */
+        .viewfinder { flex: 1; width: 100%; background-color: #1C1C1E; position: relative; overflow: hidden; border-radius: 16px; min-height: 0; }
+        #cameraRealStream { width: 100%; height: 100%; object-fit: cover; pointer-events: none; } /* [버그수정] 비디오가 터치 이벤트를 훔쳐가지 못하도록 제한 */
+        #cameraRealStream.front-active { transform: scaleX(-1); }
 
-        /* 촬영 상태 레이어 (녹화 중 깜빡임 애니메이션) */
-        .recording-status { position: absolute; top: 16px; left: 16px; display: none; align-items: center; gap: 6px; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #FFF; font-size: 12px; font-weight: 600; z-index: 3; }
+        /* 촬영 상태 레이어 */
+        .recording-status { position: absolute; top: 16px; left: 16px; display: none; align-items: center; gap: 6px; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; color: #FFF; font-size: 12px; font-weight: 600; z-index: 10; }
         .recording-status::before { content: ''; display: inline-block; width: 8px; height: 8px; background-color: #FF3B30; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
@@ -68,11 +69,10 @@
         .viewfinder::after { content: ''; position: absolute; left: 33.33%; right: 33.33%; top: 0; bottom: 0; border-left: 1px solid rgba(255,255,255,0.2); border-right: 1px solid rgba(255,255,255,0.2); pointer-events: none; z-index: 2; }
         
         /* 하단 촬영 컨트롤러 */
-        .camera-controls { height: 120px; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background-color: #000000; }
+        .camera-controls { height: 120px; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background-color: #000000; position: relative; z-index: 20; } /* [버그수정] z-index 상향으로 터치 보장 */
         .gallery-thumb { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, #A1C4FD 0%, #C2E9FB 100%); border: 2px solid #FFFFFF; cursor: pointer; }
         .shutter-btn-container { width: 74px; height: 74px; border-radius: 50%; border: 4px solid #FFFFFF; display: flex; justify-content: center; align-items: center; cursor: pointer; }
         .shutter-btn-inner { width: 56px; height: 56px; border-radius: 50%; background-color: #FF3B30; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        /* 녹화 중일 때 셔터 버튼이 네모 모양으로 변환 */
         .shutter-btn-container.recording .shutter-btn-inner { width: 26px; height: 26px; border-radius: 6px; }
         .flip-btn { width: 46px; height: 46px; border-radius: 50%; background-color: #2C2C2E; border: none; color: #FFFFFF; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
 
@@ -82,18 +82,16 @@
         .player-container { width: 100%; aspect-ratio: 16 / 9; background-color: #1C1C1E; position: relative; display: flex; justify-content: center; align-items: center; }
         .dummy-video-frame { width: 100%; height: 100%; background: linear-gradient(210deg, #475569, #0f172a); display: flex; justify-content: center; align-items: center; position: relative; }
         
-        /* 모자이크 타깃 얼굴 */
         .target-face { width: 74px; height: 74px; border-radius: 50%; background: #FFE4E6; border: 2px dashed rgba(255,255,255,0.5); display: flex; justify-content: center; align-items: center; font-size: 24px; transition: all 0.2s ease; position: relative; z-index: 1; }
-        /* 모자이크 활성화 시 강력한 블러 필터 적용 */
         .target-face.mosaic-active { filter: blur(16px); transform: scale(1.1); border: none; }
         .player-timecode { position: absolute; bottom: 8px; left: 12px; color: #FFFFFF; font-size: 11px; background-color: rgba(0,0,0,0.6); padding: 3px 8px; border-radius: 4px; font-variant-numeric: tabular-nums; }
         
-        .edit-toolbar { height: 54px; background-color: #FFFFFF; border-bottom: 1px solid #E5E5EA; display: flex; justify-content: space-around; align-items: center; }
+        .edit-toolbar { height: 54px; background-color: #FFFFFF; border-bottom: 1px solid #E5E5EA; display: flex; justify-content: space-around; align-items: center; position: relative; z-index: 20; }
         .tool-btn { background: none; border: none; color: #1C1C1E; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; }
         .tool-btn:active { background-color: #F2F2F7; }
         .tool-btn.mosaic-toggle-btn.active { color: #007AFF; background-color: #E8F2FF; }
         
-        .timeline-container { flex: 1; background-color: #F8F9FA; display: flex; flex-direction: column; }
+        .timeline-container { flex: 1; background-color: #F8F9FA; display: flex; flex-direction: column; min-height: 0; }
         .timeline-header { height: 44px; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid #F2F2F7; }
         .play-pause-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #1C1C1E; }
         .timeline-track-wrapper { flex: 1; overflow-x: auto; position: relative; display: flex; align-items: center; }
@@ -118,227 +116,14 @@
         .status-text { font-size: 11px; color: #007AFF; margin-top: 8px; font-weight: 600; display: block; word-break: break-all; }
         .tts-textarea { width: 100%; height: 74px; padding: 10px; border: 1px solid #C7C7CC; border-radius: 8px; font-size: 13px; resize: none; margin-bottom: 12px; line-height: 1.4; }
 
-        /* 미디어 선택 화면 스타일 (중간 가교 탭) */
+        /* 미디어 선택 화면 스타일 */
         .picker-header { height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 1px solid #F2F2F7; }
         .next-btn { background-color: #007AFF; color: #FFFFFF; border: none; padding: 6px 14px; border-radius: 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
         .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; background-color: #F8F9FA; flex: 1; overflow-y: auto; }
         .media-item { aspect-ratio: 1 / 1; background: #E5E5EA; position: relative; }
-        .media-item::after { content: '0:05'; position: absolute; bottom: 6px; right: 6px; color: white; font-size: 10px; background: rgba(0,0,0,0.5); padding: 2px 4px; border-radius: 3px; }
 
-        /* 공통 하단 내비게이션 바 */
-        .bottom-nav { display: flex; height: 60px; background-color: #FFFFFF; border-top: 1px solid #E5E5EA; padding-bottom: env(safe-area-inset-bottom); }
+        /* 하단 글로벌 내비게이션 바 */
+        .bottom-nav { display: flex; height: 60px; background-color: #FFFFFF; border-top: 1px solid #E5E5EA; padding-bottom: env(safe-area-inset-bottom); position: relative; z-index: 30; } /* [버그수정] 어떤 레이어보다 항상 위에 오도록 z-index 최상위 부여 */
         .nav-item { flex: 1; display: flex; align-items: center; justify-content: center; background: none; border: none; color: #8E8E93; font-size: 14px; font-weight: 500; cursor: pointer; }
         .nav-item.active { color: #1C1C1E; font-weight: 700; position: relative; }
-        .nav-item.active::after { content: ''; position: absolute; bottom: 6px; width: 4px; height: 4px; background-color: #1C1C1E; border-radius: 50%; }
-    </style>
-</head>
-<body>
-
-    <div class="app-container">
-        
-        <main class="app-view active" id="view-camera">
-            <div class="camera-top-bar">
-                <button class="icon-btn">⚡</button>
-                <div class="ratio-indicator">9:16 (무음)</div>
-                <button class="icon-btn">⚙️</button>
-            </div>
-            <div class="viewfinder">
-                <div class="recording-status" id="recordingStatus">REC</div>
-                <video id="cameraRealStream" autoplay playsinline muted></video>
-            </div>
-            <div class="camera-controls">
-                <div class="gallery-thumb" id="galleryBtn"></div>
-                <div class="shutter-btn-container" id="shutterBtn">
-                    <div class="shutter-btn-inner"></div>
-                </div>
-                <button class="flip-btn" id="cameraFlipBtn">🔄</button>
-            </div>
-        </main>
-
-        <main class="app-view" id="view-picker">
-            <header class="picker-header">
-                <span style="font-weight:700; font-size:15px;">최근 항목</span>
-                <button class="next-btn" id="toEditBtn">편집하기</button>
-            </header>
-            <div class="media-grid">
-                <div class="media-item" style="background:#CBD5E1;"></div>
-                <div class="media-item" style="background:#94A3B8;"></div>
-                <div class="media-item" style="background:#64748B;"></div>
-            </div>
-        </main>
-
-        <main class="app-view" id="view-timeline">
-            <div class="player-container">
-                <div class="dummy-video-frame">
-                    <div class="target-face" id="targetFace">👦🏻</div>
-                </div>
-                <div class="player-timecode">00:02 / 00:05</div>
-            </div>
-            <div class="edit-toolbar">
-                <button class="tool-btn" id="splitBtn">✂️ <span>분할</span></button>
-                <button class="tool-btn" id="deleteBtn">🗑️ <span>삭제</span></button>
-                <button class="tool-btn mosaic-toggle-btn" id="mosaicBtn">🏁 <span>모자이크</span></button>
-            </div>
-            <div class="timeline-container">
-                <div class="timeline-header">
-                    <button class="play-pause-btn" id="playBtn">▶</button>
-                </div>
-                <div class="timeline-track-wrapper">
-                    <div class="playhead-line"></div>
-                    <div class="clips-stream" id="clipsStream">
-                        <div class="timeline-clip selected"><div class="clip-thumb-preview">클립 1 (5s)</div></div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <main class="app-view" id="view-audio">
-            <div class="audio-view-container">
-                
-                <div class="audio-card">
-                    <h3>🔑 ElevenLabs API Key 설정</h3>
-                    <p>코드가 공개되어도 안전하도록 브라우저 메모리에만 저장되는 안전 키 입력 방식을 채택합니다.</p>
-                    <input type="password" id="apiKeyInput" class="api-input" placeholder="xi-api-key를 입력하세요">
-                </div>
-
-                <div class="audio-card">
-                    <h3>🎙️ 1단계: 내 목소리 학습 (Voice Cloning)</h3>
-                    <p>마이크를 허용하고 버튼을 누른 상태로 약 6~10초간 스크립트를 읽고 녹음을 종료하세요.</p>
-                    <button id="recordVoiceBtn" class="action-btn btn-red">🔴 내 목소리 녹음 시작</button>
-                    <span id="voiceIdStatus" class="status-text"></span>
-                </div>
-
-                <div class="audio-card">
-                    <h3>✨ 2단계: 내 목소리 기반 TTS 가이드 음성 생성</h3>
-                    <p>학습 완료 후 대사를 기입하면 본인 목소리로 변환된 브이로그 음성이 출력됩니다.</p>
-                    <textarea id="ttsTextInput" class="tts-textarea" placeholder="내 목소리로 합성할 브이로그 대사를 입력하세요."></textarea>
-                    <button id="generateTtsBtn" class="action-btn btn-blue" disabled>내 목소리로 오디오 생성</button>
-                    <audio id="ttsAudioPlayer" controls style="width: 100%; margin-top: 14px; display: none;"></audio>
-                </div>
-
-            </div>
-        </main>
-
-        <nav class="bottom-nav">
-            <button class="nav-item active" data-target="camera">촬영</button>
-            <button class="nav-item" data-target="picker">클립</button>
-            <button class="nav-item" data-target="timeline">편집</button>
-            <button class="nav-item" data-target="audio">음성/자막</button>
-        </nav>
-    </div>
-
-    <script>
-        // --- 글로벌 탭 전환 및 카메라 하드웨어 최적화 연동 ---
-        const navItems = document.querySelectorAll('.nav-item');
-        const views = {
-            camera: document.getElementById('view-camera'),
-            picker: document.getElementById('view-picker'),
-            timeline: document.getElementById('view-timeline'),
-            audio: document.getElementById('view-audio')
-        };
-
-        navItems.forEach(item => {
-            item.addEventListener('click', () => {
-                navItems.forEach(n => n.classList.remove('active'));
-                item.classList.add('active');
-
-                Object.values(views).forEach(v => v.classList.remove('active'));
-                const target = item.dataset.target;
-                views[target].classList.add('active');
-
-                // 카메라 탭일때만 하드웨어를 활성화하여 리소스 및 배터리 절약
-                if (target === 'camera') {
-                    startHardwareCamera();
-                } else {
-                    stopHardwareCamera();
-                }
-            });
-        });
-
-        document.getElementById('galleryBtn').addEventListener('click', () => document.querySelector('[data-target="picker"]').click());
-        document.getElementById('toEditBtn').addEventListener('click', () => document.querySelector('[data-target="timeline"]').click());
-
-        // ==========================================
-        /* 기능 1 제어: 무음 카메라 스트리밍 스크립트 */
-        // ==========================================
-        let currentStream = null;
-        let useFacingMode = "environment"; // 기본 후면 카메라 세팅
-        const videoElement = document.getElementById('cameraRealStream');
-        const shutterBtn = document.getElementById('shutterBtn');
-        const recordingStatus = document.getElementById('recordingStatus');
-
-        async function startHardwareCamera() {
-            if (currentStream) { stopHardwareCamera(); }
-            
-            const constraints = {
-                video: {
-                    facingMode: useFacingMode,
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                },
-                audio: false // [핵심] 오디오 트랙을 비활성화하여 완전한 무음 촬영 환경 조성
-            };
-
-            try {
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElement.srcObject = currentStream;
-                
-                if (useFacingMode === "user") {
-                    videoElement.classList.add('front-active');
-                } else {
-                    videoElement.classList.remove('front-active');
-                }
-            } catch (error) {
-                console.error("카메라 하드웨어 구동 실패:", error);
-            }
-        }
-
-        function stopHardwareCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
-        }
-
-        // 초기 구동 실행
-        window.addEventListener('DOMContentLoaded', () => {
-            startHardwareCamera();
-        });
-
-        // 전/후면 카메라 렌즈 대칭 교환
-        document.getElementById('cameraFlipBtn').addEventListener('click', () => {
-            useFacingMode = (useFacingMode === "environment") ? "user" : "environment";
-            startHardwareCamera();
-        });
-
-        // 셔터 버튼 인터랙션 (무음 녹화중 UI 효과 토글)
-        shutterBtn.addEventListener('click', () => {
-            shutterBtn.classList.toggle('recording');
-            if(shutterBtn.classList.contains('recording')) {
-                recordingStatus.style.display = 'flex';
-            } else {
-                recordingStatus.style.display = 'none';
-            }
-        });
-
-
-        // ==========================================
-        /* 기능 2 제어: 얼굴 모자이크 및 기본 편집 스크립트 */
-        // ==========================================
-        const mosaicBtn = document.getElementById('mosaicBtn');
-        const targetFace = document.getElementById('targetFace');
-
-        // 원터치 모자이크 토글 구현
-        mosaicBtn.addEventListener('click', () => {
-            mosaicBtn.classList.toggle('active');
-            targetFace.classList.toggle('mosaic-active');
-            // 모자이크 활성화 시 이모지를 숨겨서 시각 보완 효과 극대화
-            targetFace.innerText = targetFace.classList.contains('mosaic-active') ? '' : '👦🏻';
-        });
-
-        // 간단한 분할(Split) 및 삭제(Delete) 모킹 인터랙션
-        const clipsStream = document.getElementById('clipsStream');
-        let activeClip = document.querySelector('.timeline-clip.selected');
-
-        clipsStream.addEventListener('click', (e) => {
-            const
+        .nav-item.active::after { content: ''; position: absolute; bottom: 6px
